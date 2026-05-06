@@ -1,0 +1,15 @@
+# Gerado em 2026-05-04 10:36:10.136855
+# Projeto: win___bk_md_2026
+
+PySide6
+analytics
+backtest
+core
+matplotlib
+models
+numba
+numpy
+pandas
+scipy
+ui
+utils
