@@ -8,7 +8,7 @@ chcp 65001 >nul 2>nul
 :: ============================================
 :: 1. DEFINIÇÃO DA CHAVE API (SUBSTITUA PELA SUA)
 :: ============================================
-set DEEPSEEK_API_KEY=sk-fa04bf20988d4c168e736c9f98ecd48f
+set DEEPSEEK_API_KEY=00000000000000000000000
 
 :: ============================================
 :: 2. CONFIGURAÇÕES BASE (compartilhadas)
