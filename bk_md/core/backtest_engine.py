@@ -1,14 +1,17 @@
 # ma_lab/core/backtest_engine.py
 import numpy as np
 import pandas as pd
-from numba import njit, prange, jit, set_num_threads
+from numba import njit, prange, set_num_threads
 import os
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, List
 import warnings
 warnings.filterwarnings('ignore')
 
-# Configura número de threads do Numba
-set_num_threads(os.cpu_count())
+# Configura número de threads do Numba - otimizado para 32GB RAM
+num_cpus = os.cpu_count() or 4
+# Usa ~75% dos cores para deixar margem para o sistema operacional
+optimal_threads = max(1, int(num_cpus * 0.75))
+set_num_threads(optimal_threads)
 
 @njit(cache=True, fastmath=True)
 def run_backtest_vectorized(price: np.ndarray, signal: np.ndarray,
@@ -26,14 +29,17 @@ def run_backtest_vectorized(price: np.ndarray, signal: np.ndarray,
         (strategy_returns, equity_curve, n_trades)
     """
     n = len(price)
+    if n < 2:
+        return np.zeros(0), np.ones(1), 0
 
     # Pré-aloca arrays com tipos otimizados
-    returns = np.zeros(n - 1)
+    returns = np.zeros(n - 1, dtype=np.float64)
     position = np.zeros(n - 1, dtype=np.int8)
 
     # Calcula retornos de uma vez (mais rápido que loop)
     for i in range(n - 1):
-        returns[i] = (price[i + 1] / price[i]) - 1.0
+        if price[i] > 1e-10:
+            returns[i] = (price[i + 1] / price[i]) - 1.0
 
     # Posições (excluíndo último)
     for i in range(n - 1):
@@ -43,23 +49,24 @@ def run_backtest_vectorized(price: np.ndarray, signal: np.ndarray,
     trades = 0
     prev_signal = signal[0]
 
-    for i in range(1, n):
+    for i in range(1, n - 1):
         current_signal = signal[i]
-        if current_signal != prev_signal:
+        if current_signal != prev_signal and current_signal != 0:
             trades += 1
             # Custo total por trade: slippage + comissão
             if price[i] > 1e-8:
-                total_cost_pts = (cost + slippage) * 0.5  # metade na saída, metade na entrada
+                total_cost_pts = (cost + slippage)
                 cost_impact = total_cost_pts / price[i]
-                returns[i-1] -= cost_impact * abs(current_signal - prev_signal)
+                returns[i-1] -= cost_impact
             prev_signal = current_signal
 
     # Retornos da estratégia
-    strategy_returns = position * returns
+    strategy_returns = np.zeros(n - 1, dtype=np.float64)
+    for i in range(n - 1):
+        strategy_returns[i] = position[i] * returns[i]
 
     # Equity curve - cálculo único
-    equity = np.zeros(n)
-    equity[0] = 1.0
+    equity = np.ones(n, dtype=np.float64)
     cumprod = 1.0
     for i in range(n - 1):
         cumprod *= (1.0 + strategy_returns[i])
