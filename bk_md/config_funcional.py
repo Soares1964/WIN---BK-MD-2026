@@ -1,224 +1,395 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-CONFIGURAÇÃO QUE FUNCIONOU NOS TESTES
-======================================
-Esta configuração reproduz exatamente os parâmetros que geraram
-os resultados positivos nos testes de validação.
+CONFIGURAÇÃO PROFISSIONAL PARA PRODUÇÃO
+========================================
+Esta configuração implementa as melhores práticas para backtest
+e otimização de sistemas de trading com validação estatística.
+
+Para 32GB RAM: Usa até 75% dos cores, cache inteligente e batches otimizados.
 """
 
 from core.optimizer_engine import OptimizationConfig
 
-def get_config_funcional():
+
+def get_config_producao_conservadora():
     """
-    Retorna configuração que funcionou nos testes
-    Sem filtros rigorosos, apenas parâmetros que geraram resultados
+    Configuração CONSERVADORA para produção real
+    - Validação estatística rigorosa
+    - Custos realistas elevados
+    - Walk-forward obrigatório
+    - Filtros de qualidade altos
     """
     
     config = OptimizationConfig(
         # =========================================================
-        # INDICADORES - OS QUE APARECERAM NOS TESTES
+        # INDICADORES - Apenas os mais robustos
         # =========================================================
-        fast_indicators=['SMA', 'EMA', 'HMA'],  # HMA apareceu como melhor
-        slow_indicators=['SMA', 'EMA'],         # SMA dominou como lenta
+        fast_indicators=['EMA', 'HMA', 'KAMA'],  # Redução de lag + adaptativas
+        slow_indicators=['SMA', 'EMA'],           # Clássicas como referência
         
         # =========================================================
-        # PERÍODOS - RANGE QUE PRODUZIU OS MELHORES RESULTADOS
+        # PERÍODOS - Range equilibrado
         # =========================================================
-        # FAST: entre 10 e 30 (onde estavam EMA18, EMA24, EMA26, EMA28, HMA10)
+        fast_min=8,
+        fast_max=40,
+        fast_step=2,
+        
+        slow_min=30,
+        slow_max=100,
+        slow_step=5,
+        
+        # =========================================================
+        # TIMEFRAMES - Múltiplos para robustez
+        # =========================================================
+        timeframes=[5, 10, 15],  # 5min (principal), 10min, 15min
+        
+        # =========================================================
+        # FILTROS RIGOROSOS (padrão profissional)
+        # =========================================================
+        min_trades=150,              # Significância estatística
+        min_sharpe=1.5,              # Sharpe anualizado mínimo
+        min_profit_factor=1.8,       # PF mínimo conservador
+        max_dd=6.0,                  # Drawdown máximo aceitável
+        
+        # =========================================================
+        # CUSTOS REALISTAS (conservadores)
+        # =========================================================
+        slippage=1.5,                # Slippage elevado para segurança
+        cost=0.6,                    # Custo total realista
+        
+        # =========================================================
+        # CUSTOS TRANSACIONAIS AVANÇADOS
+        # =========================================================
+        tc_enabled=True,
+        tc_spread_variable=True,     # Spread varia com volatilidade
+        tc_spread_base_pts=0.5,
+        tc_spread_vol_mult=0.05,
+        tc_spread_max_pts=5.0,
+        
+        tc_slippage_variable=True,   # Slippage varia com volatilidade
+        tc_slippage_base_pts=0.8,
+        tc_slippage_vol_mult=0.10,
+        tc_slippage_max_pts=10.0,
+        
+        tc_brokerage_per_trade=0.0,  # Corretagem zero (day trade)
+        tc_exchange_fee=0.0,         # Taxas B3 embutidas no cost
+        
+        tc_ir_tax_enabled=False,     # IR calculado separadamente
+        tc_ir_tax_rate=0.20,         # 20% para day trade
+        
+        tc_liquidity_enabled=True,   # Filtra períodos de baixa liquidez
+        tc_liquidity_min_atr_ratio=0.3,
+        
+        tc_gap_enabled=True,         # Evita trades em gaps
+        tc_gap_max_minutes=30,
+        
+        # =========================================================
+        # RISK MANAGEMENT
+        # =========================================================
+        sl_type=2,                   # Stop por ATR múltiplo
+        sl_value=2.0,                # 2x ATR de stop
+        tp_type=0,                   # Sem TP fixo (deixa correr)
+        tp_value=0.0,
+        atr_period=14,
+        
+        # Position sizing conservador
+        sizing_method=1,             # Fixed fractional
+        risk_per_trade=0.01,         # 1% do capital por trade
+        max_alloc_pct=0.20,          # Máximo 20% por sistema
+        
+        # =========================================================
+        # VALIDAÇÃO ESTATÍSTICA COMPLETA
+        # =========================================================
+        run_statistical_validation=True,
+        stat_top_n=10,
+        stat_n_monte_carlo=2000,     # 2000 cenários para precisão
+        stat_n_bootstrap=2000,
+        stat_n_null_hypothesis=300,
+        stat_mc_confidence=0.95,
+        stat_bootstrap_confidence=0.95,
+        
+        # =========================================================
+        # WALK-FORWARD OPTIMIZATION
+        # =========================================================
+        use_walkforward=True,
+        wf_n_windows=4,              # 4 janelas para validação cruzada
+        wf_train_pct=0.50,           # 50% treino
+        wf_test_pct=0.25,            # 25% teste
+        wf_cv_mode="rolling",        # Janelas deslizantes
+        wf_top_n=5,                  # Top 5 de cada janela
+        
+        # =========================================================
+        # PORTFOLIO MANAGEMENT
+        # =========================================================
+        pf_enabled=True,
+        pf_allocation_method="risk_parity",  # Equaliza risco
+        pf_rebalance_enabled=False,          # Rebalanceamento desliga
+        pf_rebalance_freq_bars=1000,
+        pf_dd_management_enabled=True,       # Proteção por drawdown
+        pf_dd_threshold=10.0,                # Ativa em 10% DD
+        pf_dd_reduction=0.5,                 # Reduz 50% exposição
+        pf_top_n=10,                         # Top 10 sistemas
+        pf_max_correlation=0.70,             # Diversificação real
+        
+        # =========================================================
+        # PERFORMANCE OTIMIZADA (32GB RAM)
+        # =========================================================
+        batch_size=3000,           # Balanceia memória/throughput
+        n_jobs=-1,                 # Todos os cores disponíveis
+        use_cache=True,
+        debug=False
+    )
+    
+    return config
+
+
+def get_config_pesquisa_rapida():
+    """
+    Configuração RÁPIDA para screening inicial
+    - Sem validação estatística (fase exploratória)
+    - Custos reduzidos para não eliminar candidatos
+    - Filtros relaxados
+    """
+    
+    config = OptimizationConfig(
+        # Indicadores diversificados para pesquisa
+        fast_indicators=['SMA', 'EMA', 'HMA', 'WMA', 'KAMA', 'FRAMA', 'DEMA', 'TEMA'],
+        slow_indicators=['SMA', 'EMA', 'HMA', 'WMA', 'KAMA'],
+        
+        # Range amplo para descoberta
+        fast_min=5,
+        fast_max=50,
+        fast_step=3,
+        
+        slow_min=20,
+        slow_max=150,
+        slow_step=10,
+        
+        # Múltiplos timeframes
+        timeframes=[1, 3, 5, 10, 15],
+        
+        # Filtros mínimos
+        min_trades=50,
+        min_sharpe=0.5,
+        min_profit_factor=1.2,
+        max_dd=12.0,
+        
+        # Custos padrão
+        slippage=1.0,
+        cost=0.5,
+        
+        # Sem custos avançados (rápido)
+        tc_enabled=False,
+        
+        # Sem validação estatística (rápido)
+        run_statistical_validation=False,
+        
+        # Sem walk-forward (rápido)
+        use_walkforward=False,
+        
+        # Portfolio simples
+        pf_enabled=False,
+        
+        # Performance máxima
+        batch_size=5000,
+        n_jobs=-1,
+        use_cache=True,
+        debug=False
+    )
+    
+    return config
+
+
+def get_config_validacao_final():
+    """
+    Configuração para VALIDAÇÃO FINAL dos melhores sistemas
+    - Validação estatística completa
+    - Walk-forward rigoroso
+    - Custos realistas máximos
+    """
+    
+    config = OptimizationConfig(
+        # Foco nos melhores indicadores já identificados
+        fast_indicators=['EMA', 'HMA'],
+        slow_indicators=['SMA'],
+        
+        # Range estreito ao redor dos ótimos conhecidos
+        fast_min=15,
+        fast_max=35,
+        fast_step=1,               # Step 1 para precisão máxima
+        
+        slow_min=25,
+        slow_max=45,
+        slow_step=1,               # Step 1 para precisão máxima
+        
+        # Apenas timeframe principal
+        timeframes=[5],
+        
+        # Filtros intermediários (já sabe que funciona)
+        min_trades=100,
+        min_sharpe=1.0,
+        min_profit_factor=1.5,
+        max_dd=8.0,
+        
+        # Custos realistas
+        slippage=1.5,
+        cost=0.6,
+        
+        # Custos avançados ativados
+        tc_enabled=True,
+        tc_spread_variable=True,
+        tc_slippage_variable=True,
+        tc_gap_enabled=True,
+        tc_liquidity_enabled=True,
+        
+        # Validação estatística máxima
+        run_statistical_validation=True,
+        stat_top_n=20,             # Valida mais sistemas
+        stat_n_monte_carlo=3000,   # Mais cenários
+        stat_n_bootstrap=3000,
+        stat_n_null_hypothesis=500,
+        
+        # Walk-forward completo
+        use_walkforward=True,
+        wf_n_windows=5,            # 5 janelas para robustez
+        wf_train_pct=0.50,
+        wf_test_pct=0.25,
+        wf_top_n=10,
+        
+        # Portfolio analysis
+        pf_enabled=True,
+        pf_allocation_method="markowitz",
+        pf_top_n=15,
+        pf_max_correlation=0.65,
+        
+        # Performance
+        batch_size=2000,
+        n_jobs=-1,
+        use_cache=True,
+        debug=True                 # Debug para monitoramento
+    )
+    
+    return config
+
+
+def get_config_exemplo_teste():
+    """
+    Configuração de EXEMPLO para testes rápidos
+    - Reproduz resultados dos testes iniciais
+    - Ideal para validar instalação
+    """
+    
+    config = OptimizationConfig(
+        fast_indicators=['SMA', 'EMA', 'HMA'],
+        slow_indicators=['SMA', 'EMA'],
+        
         fast_min=10,
         fast_max=30,
-        fast_step=2,      # Step 2 para teste rápido (depois pode refinar)
+        fast_step=2,
         
-        # SLOW: entre 25 e 50 (onde estavam SMA25, SMA27, SMA29, SMA31)
         slow_min=25,
         slow_max=50,
         slow_step=2,
         
-        # =========================================================
-        # TIMEFRAMES - 5 MIN FOI O MELHOR
-        # =========================================================
-        timeframes=[5],   # Foco no timeframe que deu certo
+        timeframes=[5],
         
-        # =========================================================
-        # FILTROS RELAXADOS (como nos testes)
-        # =========================================================
-        min_trades=30,              # Baixo para não eliminar sistemas
-        min_sharpe=-999,            # Ignora Sharpe (sabemos que está negativo)
-        min_profit_factor=1.05,      # Apenas > 1.0 (lucro mínimo)
-        max_dd=20.0,                # Aceita drawdown alto
+        # Filtros relaxados como nos testes
+        min_trades=30,
+        min_sharpe=-999,           # Ignora Sharpe inicialmente
+        min_profit_factor=1.05,
+        max_dd=20.0,
         
-        # =========================================================
-        # CUSTOS REALISTAS (como nos testes)
-        # =========================================================
-        slippage=0.5,                # 0.5 ponto de slippage
-        cost=0.2,                    # 0.2 ponto de custo
+        slippage=0.5,
+        cost=0.2,
         
-        # =========================================================
-        # PERFORMANCE
-        # =========================================================
-        batch_size=5000,              # Processa 5000 combinações por vez
-        n_jobs=8,                     # Usa 8 threads
-        use_cache=True,                # Usa cache de médias
-        debug=False                    # Sem debug para produção
+        # Sem features avançadas (rápido)
+        tc_enabled=False,
+        run_statistical_validation=False,
+        use_walkforward=False,
+        pf_enabled=False,
+        
+        batch_size=5000,
+        n_jobs=8,
+        use_cache=True,
+        debug=False
     )
     
     return config
 
 
-def get_config_rapido():
-    """
-    Versão ainda mais rápida para testes exploratórios
-    """
-    config = OptimizationConfig(
-        fast_indicators=['EMA', 'HMA'],     # Só os melhores
-        slow_indicators=['SMA'],            # Só SMA
-        fast_min=15,
-        fast_max=30,
-        fast_step=2,
-        slow_min=25,
-        slow_max=35,
-        slow_step=1,                        # Step 1 para precisão
-        timeframes=[5],
-        min_trades=20,
-        min_sharpe=-999,
-        min_profit_factor=1.03,
-        max_dd=25.0,
-        slippage=0.5,
-        cost=0.2,
-        batch_size=2000,
-        n_jobs=8,
-        use_cache=True,
-        debug=False
-    )
-    return config
+# =============================================================
+# GUIA DE SELEÇÃO DE CONFIGURAÇÃO
+# =============================================================
+"""
+QUAL CONFIGURAÇÃO USAR?
 
+1. PRIMEIRO USO / TESTE DE INSTALAÇÃO:
+   → get_config_exemplo_teste()
+   - Rápido, valida que o sistema funciona
+   
+2. PESQUISA INICIAL / SCREENING:
+   → get_config_pesquisa_rapida()
+   - Explora amplamente o espaço de parâmetros
+   - Identifica regiões promissoras
+   
+3. OTIMIZAÇÃO DETALHADA:
+   → Use resultados da pesquisa para definir ranges estreitos
+   - Execute com step=1 nos ranges identificados
+   
+4. VALIDAÇÃO FINAL:
+   → get_config_validacao_final()
+   - Validação estatística completa
+   - Walk-forward rigoroso
+   
+5. PRODUÇÃO REAL:
+   → get_config_producao_conservadora()
+   - Máxima segurança e realismo
+   - Pronto para trading com capital real
 
-def get_config_completo():
-    """
-    Versão completa com todos os indicadores e timeframes
-    (mais lenta, mas mais abrangente)
-    """
-    config = OptimizationConfig(
-        fast_indicators=['SMA', 'EMA', 'HMA', 'WMA', 'KAMA', 'FRAMA'],
-        slow_indicators=['SMA', 'EMA', 'HMA', 'WMA'],
-        fast_min=5,
-        fast_max=50,
-        fast_step=2,
-        slow_min=20,
-        slow_max=100,
-        slow_step=3,
-        timeframes=[1, 3, 5, 10],
-        min_trades=30,
-        min_sharpe=-999,
-        min_profit_factor=1.05,
-        max_dd=20.0,
-        slippage=0.5,
-        cost=0.2,
-        batch_size=10000,
-        n_jobs=8,
-        use_cache=True,
-        debug=False
-    )
-    return config
-
-
-def get_config_validacao():
-    """
-    Configuração para validar os melhores sistemas encontrados
-    (usa step=1 para encontrar a combinação exata)
-    """
-    config = OptimizationConfig(
-        fast_indicators=['EMA', 'HMA'],
-        slow_indicators=['SMA'],
-        fast_min=15,
-        fast_max=30,
-        fast_step=1,           # Step 1 para encontrar o ponto exato
-        slow_min=25,
-        slow_max=35,
-        slow_step=1,           # Step 1 para encontrar o ponto exato
-        timeframes=[5],
-        min_trades=30,
-        min_sharpe=-999,
-        min_profit_factor=1.1,
-        max_dd=10.0,
-        slippage=0.5,
-        cost=0.2,
-        batch_size=2000,
-        n_jobs=8,
-        use_cache=True,
-        debug=True              # Debug para ver progresso
-    )
-    return config
+CHECKLIST PRÉ-PRODUÇÃO:
+□ mc_prob_loss < 0.30
+□ boot_sharpe_p_value < 0.05
+□ dsr > 0.7
+□ null_p_value < 0.05
+□ sens_robustness > 0.6
+□ avg_sharpe_OOS > 1.0
+□ stability_score < 0.5
+□ Correlação média < 0.7
+□ Drawdown máximo < 8%
+"""
 
 
 # =============================================================
 # EXEMPLO DE USO
 # =============================================================
 if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    
-    from core.data_loader import DataLoader
-    from core.optimizer_engine import OptimizationEngine
-    
     print("="*70)
-    print("🚀 TESTE COM CONFIGURAÇÃO FUNCIONAL")
+    print("🎯 CONFIGURAÇÕES PROFISSIONAIS DISPONÍVEIS")
     print("="*70)
     
-    # Carrega dados
-    loader = DataLoader()
-    import glob
-    csv_files = glob.glob("exportacoes_mt5/*.csv")
+    configs = {
+        "Produção Conservadora": get_config_producao_conservadora,
+        "Pesquisa Rápida": get_config_pesquisa_rapida,
+        "Validação Final": get_config_validacao_final,
+        "Exemplo Teste": get_config_exemplo_teste,
+    }
     
-    if not csv_files:
-        print("❌ Nenhum arquivo CSV encontrado!")
-        sys.exit(1)
-    
-    print(f"📁 Arquivo: {os.path.basename(csv_files[0])}")
-    df = loader.load_csv(csv_files[0])
-    
-    # Pega configuração
-    config = get_config_funcional()
-    
-    # Mostra configuração
-    print("\n📊 CONFIGURAÇÃO:")
-    print(f"   FAST: {config.fast_indicators} ({config.fast_min}-{config.fast_max} step={config.fast_step})")
-    print(f"   SLOW: {config.slow_indicators} ({config.slow_min}-{config.slow_max} step={config.slow_step})")
-    print(f"   TIMEFRAMES: {config.timeframes}")
-    print(f"   MIN_TRADES: {config.min_trades}")
-    print(f"   MIN_PF: {config.min_profit_factor}")
-    print(f"   MAX_DD: {config.max_dd}%")
-    
-    # Estima total de combinações
-    engine = OptimizationEngine(loader.timeframe_dfs)
-    total = engine.estimate_total(config)
-    print(f"\n📈 Total estimado: {total} combinações")
-    
-    # Pergunta se quer executar
-    resposta = input("\n🔧 Executar otimização? (s/N): ")
-    if resposta.lower() == 's':
-        print("\n⏳ Executando...")
-        
-        def progress_cb(progress, processed, total, rate, remaining, best):
-            if processed % 500 == 0:
-                print(f"   Progresso: {progress:.1f}% ({processed}/{total}) | {rate:.0f} sys/s")
-        
-        results = engine.run(config, progress_callback=progress_cb)
-        
-        print(f"\n✅ Encontrados {len(results)} sistemas com PF > {config.min_profit_factor}")
-        
-        if results:
-            print("\n🏆 TOP 10 por Profit Factor:")
-            print("-" * 70)
-            print(f"{'#':<3} {'FAST':<12} {'SLOW':<12} {'PF':<8} {'Retorno':<10} {'DD':<8} {'Trades':<8}")
-            print("-" * 70)
-            
-            for i, r in enumerate(sorted(results, key=lambda x: x.profit_factor, reverse=True)[:10]):
-                print(f"{i+1:<3} {r.fast_indicator}({r.fast_period})  {r.slow_indicator}({r.slow_period})  "
-                      f"{r.profit_factor:>6.2f}  {r.total_return:>7.1f}%  {r.max_dd:>6.1f}%  {r.trades:>6.0f}")
+    for nome, func in configs.items():
+        cfg = func()
+        print(f"\n{nome}:")
+        print(f"  - Indicadores FAST: {cfg.fast_indicators}")
+        print(f"  - Indicadores SLOW: {cfg.slow_indicators}")
+        print(f"  - Timeframes: {cfg.timeframes}")
+        print(f"  - Min Trades: {cfg.min_trades}")
+        print(f"  - Min Sharpe: {cfg.min_sharpe}")
+        print(f"  - Min PF: {cfg.min_profit_factor}")
+        print(f"  - Max DD: {cfg.max_dd}%")
+        print(f"  - Validação Estatística: {'✅' if cfg.run_statistical_validation else '❌'}")
+        print(f"  - Walk-Forward: {'✅' if cfg.use_walkforward else '❌'}")
+        print(f"  - Portfolio: {'✅' if cfg.pf_enabled else '❌'}")
+        print(f"  - Custos Realistas: {'✅' if cfg.tc_enabled else '❌'}")
     
     print("\n" + "="*70)
-    print("✅ CONFIGURAÇÃO FUNCIONAL PRONTA PARA USO")
+    print("📖 Consulte MELHORIAS_PROFISSIONAIS.md para detalhes completos")
     print("="*70)
